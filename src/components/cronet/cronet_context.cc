@@ -66,6 +66,9 @@
 #include "net/url_request/url_request_context_builder.h"
 #include "net/url_request/url_request_context_getter.h"
 #include "net/url_request/url_request_interceptor.h"
+#include "net/proxy_resolution/proxy_config_service.h"
+#include "net/proxy_resolution/proxy_config.h"
+
 
 #if BUILDFLAG(ENABLE_REPORTING)
 #include "net/network_error_logging/network_error_logging_service.h"
@@ -206,6 +209,7 @@ CronetContext::CronetContext(
       default_load_flags_(
           net::LOAD_NORMAL |
           (context_config->load_disable_cache ? net::LOAD_DISABLE_CACHE : 0)),
+      proxy_rules_(context_config->proxy_rules),
       network_tasks_(
           new NetworkTasks(std::move(context_config), std::move(callback))),
       network_task_runner_(network_task_runner) {
@@ -255,12 +259,41 @@ CronetContext::NetworkTasks::~NetworkTasks() {
   }
 }
 
+
+class ProxyConfigServiceCustom : public net::ProxyConfigService {
+ public:
+  ProxyConfigServiceCustom(const std::string& proxy_rules):proxy_rules_(proxy_rules) {}
+  void AddObserver(Observer* observer) override {}
+  void RemoveObserver(Observer* observer) override {}
+  ConfigAvailability GetLatestProxyConfig(
+      net::ProxyConfigWithAnnotation* config) override {
+
+    auto proxy_config = net::ProxyConfig();
+    proxy_config.proxy_rules().ParseFromString(proxy_rules_);
+    auto annotation = net::DefineNetworkTrafficAnnotation("test", "test");
+    *config = net::ProxyConfigWithAnnotation(proxy_config, annotation);
+    return CONFIG_VALID;
+  }
+
+  private:
+    const std::string proxy_rules_;
+};
+
+
 void CronetContext::InitRequestContextOnInitThread() {
   DCHECK(OnInitThread());
   // Cannot create this inside Initialize because Android requires this to be
   // created on the JNI thread.
-  auto proxy_config_service =
+
+  std::unique_ptr<net::ProxyConfigService> proxy_config_service;
+  if (!proxy_rules_.empty()) {
+    proxy_config_service =
+      std::make_unique<ProxyConfigServiceCustom>(proxy_rules_);
+  } else {
+    proxy_config_service =
       cronet::CreateProxyConfigService(GetNetworkTaskRunner());
+  }
+
   g_net_log.Get().EnsureInitializedOnInitThread();
   GetNetworkTaskRunner()->PostTask(
       FROM_HERE,

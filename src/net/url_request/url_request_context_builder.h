@@ -197,6 +197,9 @@ class NET_EXPORT URLRequestContextBuilder {
   // have the headers already set.
   void set_accept_language(const std::string& accept_language);
   void set_user_agent(const std::string& user_agent);
+void set_proxy_username(const std::string& proxy_username);
+void set_proxy_password(const std::string& proxy_password);
+void set_proxy_rules(const std::string& proxy_rules);
 
   // Makes the created URLRequestContext use a particular HttpUserAgentSettings
   // object. Not compatible with set_accept_language() / set_user_agent().
@@ -416,6 +419,10 @@ class NET_EXPORT URLRequestContextBuilder {
 
   std::string accept_language_;
   std::string user_agent_;
+  std::string proxy_username_;
+  std::string proxy_password_;
+  std::string proxy_rules_;
+
   std::unique_ptr<HttpUserAgentSettings> http_user_agent_settings_;
 
   absl::optional<std::string> cookie_deprecation_label_;

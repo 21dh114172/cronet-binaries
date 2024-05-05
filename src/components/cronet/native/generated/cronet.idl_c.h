@@ -794,6 +794,25 @@ void Cronet_EngineParams_enable_check_result_set(
 CRONET_EXPORT
 void Cronet_EngineParams_user_agent_set(Cronet_EngineParamsPtr self,
                                         const Cronet_String user_agent);
+                                        CRONET_EXPORT
+CRONET_EXPORT
+void Cronet_EngineParams_proxy_rules_set(Cronet_EngineParamsPtr self,
+                                         const Cronet_String proxy_rules);
+                                         CRONET_EXPORT
+
+CRONET_EXPORT
+void Cronet_EngineParams_proxy_username_set(
+    Cronet_EngineParamsPtr self,
+    const Cronet_String proxy_user);
+    CRONET_EXPORT
+CRONET_EXPORT
+void Cronet_EngineParams_proxy_password_set(
+    Cronet_EngineParamsPtr self,
+    const Cronet_String proxy_password);
+    CRONET_EXPORT
+
+
+
 CRONET_EXPORT
 void Cronet_EngineParams_accept_language_set(
     Cronet_EngineParamsPtr self,
@@ -837,12 +856,16 @@ CRONET_EXPORT
 void Cronet_EngineParams_experimental_options_set(
     Cronet_EngineParamsPtr self,
     const Cronet_String experimental_options);
+
 // Cronet_EngineParams getters.
 CRONET_EXPORT
 bool Cronet_EngineParams_enable_check_result_get(
     const Cronet_EngineParamsPtr self);
 CRONET_EXPORT
 Cronet_String Cronet_EngineParams_user_agent_get(
+    const Cronet_EngineParamsPtr self);
+CRONET_EXPORT
+Cronet_String Cronet_EngineParams_proxy_rules_get(
     const Cronet_EngineParamsPtr self);
 CRONET_EXPORT
 Cronet_String Cronet_EngineParams_accept_language_get(

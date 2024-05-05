@@ -152,6 +152,11 @@ Cronet_RESULT Cronet_EngineImpl::StartWithParams(
   context_config_builder.experimental_options = params->experimental_options;
   context_config_builder.bypass_public_key_pinning_for_local_trust_anchors =
       params->enable_public_key_pinning_bypass_for_local_trust_anchors;
+  context_config_builder.proxy_rules = params->proxy_rules;
+    context_config_builder.proxy_username= params->proxy_username;
+      context_config_builder.proxy_password = params->proxy_password;
+
+
   if (!isnan(params->network_thread_priority)) {
     context_config_builder.network_thread_priority =
         params->network_thread_priority;

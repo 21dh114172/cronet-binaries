@@ -249,6 +249,27 @@ void Cronet_EngineParams_user_agent_set(Cronet_EngineParamsPtr self,
   self->user_agent = user_agent;
 }
 
+void Cronet_EngineParams_proxy_rules_set(Cronet_EngineParamsPtr self,
+                                         const Cronet_String proxy_rules) {
+  DCHECK(self);
+  self->proxy_rules = proxy_rules;
+}
+
+
+void Cronet_EngineParams_proxy_username_set(
+    Cronet_EngineParamsPtr self,
+    const Cronet_String proxy_user) {
+  DCHECK(self);
+  self->proxy_username = proxy_user;
+}
+
+void Cronet_EngineParams_proxy_password_set(
+    Cronet_EngineParamsPtr self,
+    const Cronet_String proxy_password) {
+  DCHECK(self);
+  self->proxy_password = proxy_password;
+}
+
 void Cronet_EngineParams_accept_language_set(
     Cronet_EngineParamsPtr self,
     const Cronet_String accept_language) {
@@ -340,6 +361,12 @@ Cronet_String Cronet_EngineParams_user_agent_get(
     const Cronet_EngineParamsPtr self) {
   DCHECK(self);
   return self->user_agent.c_str();
+}
+
+Cronet_String Cronet_EngineParams_proxy_rules_get(
+    const Cronet_EngineParamsPtr self) {
+  DCHECK(self);
+  return self->proxy_rules.c_str();
 }
 
 Cronet_String Cronet_EngineParams_accept_language_get(

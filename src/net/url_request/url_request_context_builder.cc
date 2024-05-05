@@ -53,6 +53,8 @@
 #include "net/url_request/url_request_throttler_manager.h"
 #include "third_party/abseil-cpp/absl/types/optional.h"
 #include "url/url_constants.h"
+#include "net/ssl/ssl_info.h"
+
 
 #if BUILDFLAG(ENABLE_REPORTING)
 #include "net/network_error_logging/network_error_logging_service.h"
@@ -124,6 +126,18 @@ void URLRequestContextBuilder::set_accept_language(
 void URLRequestContextBuilder::set_user_agent(const std::string& user_agent) {
   DCHECK(!http_user_agent_settings_);
   user_agent_ = user_agent;
+}
+void URLRequestContextBuilder::set_proxy_username(const std::string& proxy_username) {
+  DCHECK(!http_user_agent_settings_);
+  proxy_username_ = proxy_username;
+}
+void URLRequestContextBuilder::set_proxy_rules(const std::string& proxy_rules) {
+  DCHECK(!http_user_agent_settings_);
+  proxy_rules_ = proxy_rules;
+}
+void URLRequestContextBuilder::set_proxy_password(const std::string& proxy_password) {
+  DCHECK(!http_user_agent_settings_);
+  proxy_password_ = proxy_password;
 }
 
 void URLRequestContextBuilder::set_http_user_agent_settings(
@@ -382,6 +396,25 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
     context->set_http_auth_handler_factory(
         HttpAuthHandlerRegistryFactory::CreateDefault());
   }
+  // if (! proxy_username_.empty() && !proxy_password_.empty()){
+  //   std::unique_ptr<HttpAuthHandlerRegistryFactory> http_auth_handler_factory(
+  //     HttpAuthHandlerFactory::CreateDefault());
+  //     // std::unique_ptr<HttpAuthHandler> handler;
+
+
+  //         SSLInfo null_ssl_info;
+  // // fprintf(stderr, "proxy_rules_ %s\n", proxy_rules_.c_str());
+  // // url::SchemeHostPort proxy_scheme_host_port(GURL(proxy_rules_.c_str()));
+
+  // //       http_auth_handler_factory->CreateAuthHandlerFromString(
+  // //       "Basic", HttpAuth::AUTH_PROXY,
+  // //       null_ssl_info, NetworkAnonymizationKey(), proxy_scheme_host_port,
+  // //       NetLogWithSource(), host_resolver_.get(), &handler);
+  //   // int rv = http_auth_handler_factory->CreateAuthHandlerFromString(
+  //   //     "Basic realm=\"FooBar\"", HttpAuth::AUTH_SERVER, null_ssl_info,
+  //   //     NetworkAnonymizationKey(), server_scheme_host_port, NetLogWithSource(),
+  //   //     host_resolver.get(), &handler);
+  // }
 
   if (cookie_store_set_by_client_) {
     context->set_cookie_store(std::move(cookie_store_));
@@ -390,7 +423,7 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
                                                         context->net_log());
     context->set_cookie_store(std::move(cookie_store));
   }
-
+  // fprintf(stderr, "proxy %s %s\n", proxy_username_.c_str(), proxy_password_.c_str());
   context->set_transport_security_state(
       std::make_unique<TransportSecurityState>(hsts_policy_bypass_list_));
   if (!transport_security_persister_file_path_.empty()) {

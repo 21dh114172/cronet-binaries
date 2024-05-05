@@ -386,6 +386,8 @@ class CronetContext {
   // File thread should be destroyed last.
   std::unique_ptr<base::Thread> file_thread_;
 
+  const std::string proxy_rules_;
+
   // |network_tasks_| is owned by |this|. It is created off the network thread,
   // but invoked and destroyed on network thread.
   raw_ptr<NetworkTasks, AcrossTasksDanglingUntriaged> network_tasks_;

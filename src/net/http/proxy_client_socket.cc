@@ -16,7 +16,23 @@
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
 #include "url/gurl.h"
+// #include <execinfo.h>
+// void DumpTraceback(int signal) {
+//     const int size = 200;
+//     void *buffer[size];
+//     char **strings;
+//     int nptrs = backtrace(buffer, size);
+//     printf("backtrace() returned %d address\n", nptrs);
 
+//     // backtrace_symbols函数不可重入， 可以使用backtrace_symbols_fd替换
+//     strings = backtrace_symbols(buffer, nptrs);
+//     if (strings) {
+//         for (int i = 0; i < nptrs; ++i) {
+//             printf("%s\n", strings[i]);
+//         }
+//         free(strings);
+//     }
+// }
 namespace net {
 
 void ProxyClientSocket::SetStreamPriority(RequestPriority priority) {}
@@ -33,13 +49,19 @@ void ProxyClientSocket::BuildTunnelRequest(
   // following the request-line.  Add "Proxy-Connection: keep-alive" for compat
   // with HTTP/1.0 proxies such as Squid (required for NTLM authentication).
   std::string host_and_port = endpoint.ToString();
+  // DumpTraceback(0);
   *request_line =
       base::StringPrintf("CONNECT %s HTTP/1.1\r\n", host_and_port.c_str());
   request_headers->SetHeader(HttpRequestHeaders::kHost, host_and_port);
   request_headers->SetHeader(HttpRequestHeaders::kProxyConnection,
                              "keep-alive");
+              // request_headers->SetHeader(HttpRequestHeaders::kProxyAuthorization,
+                            //  "Basic dXNlci11bmkwMDMtcmVnaW9uLWRlLXNlc3NpZC0xMTI1LXNlc3N0aW1lLTUta2VlcC10cnVlOnEzOUNFQlRzNUE1WVFYb3I=");
+
+    // fprintf(stderr, "ua2 %s\n", user_agent.c_str());
+
   if (!user_agent.empty())
-    request_headers->SetHeader(HttpRequestHeaders::kUserAgent, user_agent);
+    request_headers->SetHeader(HttpRequestHeaders::kProxyAuthorization, user_agent);
 
   request_headers->MergeFrom(extra_headers);
 }

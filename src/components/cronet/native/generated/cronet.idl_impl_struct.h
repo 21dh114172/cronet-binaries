@@ -83,8 +83,11 @@ struct Cronet_EngineParams {
 
   bool enable_check_result = true;
   std::string user_agent;
+  std::string proxy_rules;
   std::string accept_language;
   std::string storage_path;
+  std::string proxy_username;
+  std::string proxy_password;
   bool enable_quic = true;
   bool enable_http2 = true;
   bool enable_brotli = true;

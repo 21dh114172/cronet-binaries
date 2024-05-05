@@ -511,6 +511,8 @@ struct EngineParams {
    */
   string user_agent;
 
+  string proxy_rules;
+
   /**
    * Sets a default value for the Accept-Language header value for UrlRequests
    * created by this engine. Explicitly setting the Accept-Language header

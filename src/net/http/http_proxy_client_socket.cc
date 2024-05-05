@@ -51,6 +51,7 @@ HttpProxyClientSocket::HttpProxyClientSocket(
   // Synthesize the bits of a request that are actually used.
   request_.url = GURL("https://" + endpoint.ToString());
   request_.method = "CONNECT";
+  // fprintf(stderr, "ua %s\n", user_agent.c_str());
   if (!user_agent.empty())
     request_.extra_headers.SetHeader(HttpRequestHeaders::kUserAgent,
                                      user_agent);
@@ -343,6 +344,7 @@ int HttpProxyClientSocket::DoSendRequest() {
     DCHECK(request_headers_.IsEmpty());
 
     HttpRequestHeaders extra_headers;
+    // fprintf(stderr, "auth_->HaveAuth() %x\n", auth_->HaveAuth());
     if (auth_->HaveAuth())
       auth_->AddAuthorizationHeader(&extra_headers);
     // AddAuthorizationHeader() might not have added the header even if
