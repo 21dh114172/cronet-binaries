@@ -58,7 +58,7 @@ void ProxyClientSocket::BuildTunnelRequest(
               // request_headers->SetHeader(HttpRequestHeaders::kProxyAuthorization,
                             //  "Basic dXNlci11bmkwMDMtcmVnaW9uLWRlLXNlc3NpZC0xMTI1LXNlc3N0aW1lLTUta2VlcC10cnVlOnEzOUNFQlRzNUE1WVFYb3I=");
 
-    // fprintf(stderr, "ua2 %s\n", user_agent.c_str());
+     fprintf(stderr, "ua2 %s\n", user_agent.c_str());
 
   if (!user_agent.empty())
     request_headers->SetHeader(HttpRequestHeaders::kProxyAuthorization, user_agent);

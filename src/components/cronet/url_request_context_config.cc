@@ -870,6 +870,8 @@ void URLRequestContextConfig::ConfigureURLRequestContextBuilder(
   }
   context_builder->set_accept_language(accept_language);
   context_builder->set_user_agent(user_agent);
+      context_builder->set_proxy_rules(proxy_rules);
+
     context_builder->set_proxy_username(proxy_username);
         context_builder->set_proxy_password(proxy_password);
 
