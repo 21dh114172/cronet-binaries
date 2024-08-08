@@ -1,0 +1,181 @@
+name: Build
+on:
+  push:
+    branches: [main]
+    paths-ignore: [README.md]
+  release:
+    types: [published]
+defaults:
+  run:
+    shell: bash
+    working-directory: src
+env:
+  CACHE_EPOCH: 1
+  CCACHE_MAXSIZE: 200M
+  CCACHE_MAXFILES: 0
+  SCCACHE_CACHE_SIZE: 200M
+jobs:
+  cache-toolchains-posix:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache toolchains (Linux, OpenWrt, Android)
+        uses: actions/cache@v3
+        with:
+          path: |
+            src/third_party/llvm-build/Release+Asserts/
+            src/gn/
+            src/qemu-user-static*.deb
+          key: toolchains-posix-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - name: Cache PGO (Linux, OpenWrt)
+        uses: actions/cache@v3
+        with:
+          path: src/chrome/build/pgo_profiles/
+          key: pgo-linux-openwrt-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - name: Cache AFDO (Android)
+        uses: actions/cache@v3
+        with:
+          path: src/chrome/android/profiles/
+          key: afdo-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - name: Cache Android NDK (Android)
+        uses: actions/cache@v3
+        with:
+          path: src/third_party/android_toolchain/ndk/
+          key: android-ndk-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - run: ./get-clang.sh
+      - run: EXTRA_FLAGS='target_os="android"' ./get-clang.sh
+      - run: |
+          if [ ! -f qemu-user-static*.deb ]; then
+            wget https://snapshot.debian.org/archive/debian/20230611T210420Z/pool/main/q/qemu/qemu-user-static_8.0%2Bdfsg-4_amd64.deb
+          fi
+  
+  cache-toolchains-mac:
+    runs-on: macos-11
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: |
+            src/third_party/llvm-build/Release+Asserts/
+            src/chrome/build/pgo_profiles/chrome-mac-*
+            src/gn/
+          key: toolchains-pgo-mac-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - run: EXTRA_FLAGS='target_cpu="x64"' ./get-clang.sh
+      - run: EXTRA_FLAGS='target_cpu="arm64"' ./get-clang.sh
+  linux:
+    needs: cache-toolchains-posix
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, x86]
+    env:
+      EXTRA_FLAGS: 'target_cpu="${{ matrix.arch }}"'
+      BUNDLE: cronet-${{ github.event.release.tag_name }}-${{ github.job }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache toolchains (Linux, OpenWrt, Android)
+        uses: actions/cache@v3
+        with:
+          path: |
+            src/third_party/llvm-build/Release+Asserts/
+            src/gn/
+            src/qemu-user-static*.deb
+          key: toolchains-posix-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - name: Cache PGO (Linux, OpenWrt)
+        uses: actions/cache@v3
+        with:
+          path: src/chrome/build/pgo_profiles/
+          key: pgo-linux-openwrt-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - name: Regenerate Debian keyring
+        run: |
+          rm -f ./build/linux/sysroot_scripts/keyring.gpg
+          GPG_TTY=/dev/null ./build/linux/sysroot_scripts/generate_keyring.sh
+      - name: Cache sysroot
+        uses: actions/cache@v3
+        with:
+          path: src/out/sysroot-build/bullseye/bullseye_*
+          key: sysroot-linux-${{ matrix.arch }}-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - id: ccache-timestamp
+        run: echo "CCACHE_TIMESTAMP=$(date +%s)" >>$GITHUB_OUTPUT
+      - name: Cache ccache files
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ccache-linux-${{ matrix.arch }}-${{ hashFiles('CHROMIUM_VERSION') }}-${{ steps.ccache-timestamp.outputs.CCACHE_TIMESTAMP }}
+          restore-keys: ccache-linux-${{ matrix.arch }}-${{ hashFiles('CHROMIUM_VERSION') }}-
+      - name: Install APT packages
+        run: |
+          sudo apt update
+          sudo apt install -y ninja-build pkg-config ccache bubblewrap
+          sudo apt remove -y qemu-user-binfmt
+          sudo dpkg -i qemu-user-static*.deb
+          # libc6-i386 interferes with x86 build
+          sudo apt remove -y libc6-i386
+      - run: ./get-clang.sh
+      - run: ccache -z
+      - run: ./build.sh
+      - run: ccache -s
+      - name: Pack assets
+        run: |
+          mv out/Release/cronet ${{ env.BUNDLE }}
+          tar cJf ${{ env.BUNDLE }}.tar.xz ${{ env.BUNDLE }}
+          openssl sha256 ${{ env.BUNDLE }}.tar.xz >sha256sum.txt
+          echo "SHA256SUM=$(cut -d' ' -f2 sha256sum.txt)" >>$GITHUB_ENV
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.BUNDLE }}.tar.xz binaries sha256 ${{ env.SHA256SUM }}
+          path: src/sha256sum.txt
+      - name: Upload assets
+        run: gh release upload "${GITHUB_REF##*/}" ${{ env.BUNDLE }}.tar.xz --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  mac:
+    needs: cache-toolchains-mac
+    runs-on: macos-11
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    env:
+      EXTRA_FLAGS: 'target_cpu="${{ matrix.arch }}"'
+      BUNDLE: cronet-${{ github.event.release.tag_name }}-${{ github.job }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache toolchains and PGO
+        uses: actions/cache@v3
+        with:
+          path: |
+            src/third_party/llvm-build/Release+Asserts/
+            src/chrome/build/pgo_profiles/chrome-mac-*
+            src/gn/
+          key: toolchains-pgo-mac-${{ hashFiles('CHROMIUM_VERSION') }}-v${{ env.CACHE_EPOCH }}
+      - id: ccache-timestamp
+        run: echo "CCACHE_TIMESTAMP=$(date +%s)" >>$GITHUB_OUTPUT
+      - name: Cache ccache files
+        uses: actions/cache@v3
+        with:
+          path: ~/Library/Caches/ccache
+          key: ccache-mac-${{ matrix.arch }}-${{ hashFiles('CHROMIUM_VERSION') }}-${{ steps.ccache-timestamp.outputs.CCACHE_TIMESTAMP }}
+          restore-keys: ccache-mac-${{ matrix.arch }}-${{ hashFiles('CHROMIUM_VERSION') }}-
+      - run: brew install ninja ccache
+      - run: pip install setuptools
+      - run: ./get-clang.sh
+      - run: ccache -z
+      - run: ./build.sh
+      - run: ccache -s
+      - name: Pack assets
+        run: |
+          mv out/Release/cronet ${{ env.BUNDLE }}
+          tar cJf ${{ env.BUNDLE }}.tar.xz ${{ env.BUNDLE }}
+          openssl sha256 ${{ env.BUNDLE }}.tar.xz >sha256sum.txt
+          echo "SHA256SUM=$(cut -d' ' -f2 sha256sum.txt)" >>$GITHUB_ENV
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.BUNDLE }}.tar.xz binaries sha256 ${{ env.SHA256SUM }}
+          path: src/sha256sum.txt
+      - name: Upload assets
+        run: gh release upload "${GITHUB_REF##*/}" ${{ env.BUNDLE }}.tar.xz --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
